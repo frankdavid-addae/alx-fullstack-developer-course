@@ -1,9 +1,6 @@
 import os
-import unittest
 from flask import Flask, request, abort, jsonify
-from flask_sqlalchemy import SQLAlchemy  # , or_
 from flask_cors import CORS
-import random
 
 from models import setup_db, Book
 
@@ -42,6 +39,8 @@ def create_app(test_config=None):
         try:
             books = Book.query.all()
             current_books = paginate_books(request, books)
+            if len(current_books) == 0:
+                abort(404)
             return jsonify({
                 'success': True,
                 'books': current_books,
@@ -66,7 +65,7 @@ def create_app(test_config=None):
                 'id': book.id
             })
         except Exception:
-            abort(422)
+            abort(400)
 
     # Delete a book
     @app.route('/books/<int:book_id>', methods=['DELETE'])
@@ -92,18 +91,32 @@ def create_app(test_config=None):
     def create_book():
         try:
             data = request.get_json()
-            if 'title' not in data or 'author' not in data or 'rating' not in data:
-                abort(422)
-            book = Book(title=data['title'], author=data['author'], rating=data['rating'])
-            book.insert()
-            books = Book.query.all()
-            current_books = paginate_books(request, books)
-            return jsonify({
-                'success': True,
-                'created': book.id,
-                'books': current_books,
-                'total_books': len(books)
-            })
+            title = data.get('title', None)
+            author = data.get('author', None)
+            rating = data.get('rating', None)
+            search = data.get('search', None)
+
+            if search:
+                books = Book.query.filter(Book.title.ilike('%' + search + '%')).all()
+                current_books = paginate_books(request, books)
+                return jsonify({
+                    'success': True,
+                    'books': current_books,
+                    'total_books': len(books)
+                })
+
+            else:
+                book = Book(title=title, author=author, rating=rating)
+                book.insert()
+                books = Book.query.all()
+                current_books = paginate_books(request, books)
+                return jsonify({
+                    'success': True,
+                    'created': book.id,
+                    'books': current_books,
+                    'total_books': len(books)
+                })
+                
         except Exception:
             abort(422)
 
@@ -122,5 +135,21 @@ def create_app(test_config=None):
             "error": 422,
             "message": "Unprocessable"
         }), 422
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return jsonify({
+            "success": False,
+            "error": 400,
+            "message": "Bad request"
+        }), 400
+
+    @app.errorhandler(405)
+    def method_not_allowed(error):
+        return jsonify({
+            "success": False,
+            "error": 405,
+            "message": "Method not allowed"
+        }), 405
 
     return app

@@ -1,9 +1,8 @@
 import os
 from sqlalchemy import Column, String, Integer, create_engine
 from flask_sqlalchemy import SQLAlchemy
-import json
 
-database_name = "bookshelf"
+database_name = "bookshelf_test"
 database_path = "postgresql://{}:{}@{}/{}".format(
     "makafui", "password", "localhost:5432", database_name
 )
