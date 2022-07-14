@@ -106,10 +106,16 @@ def verify_decode_jwt(token):
 
 def check_permissions(permission, payload):
   if 'permissions' not in payload:
-    abort(400)
+    raise AuthError({
+      'code': 'invalid_claims',
+      'description': 'Permissions not included in JWT.'
+    }, 400)
 
   if permission not in payload['permissions']:
-    abort(403)
+    raise AuthError({
+      'code': 'unauthorized',
+      'description': 'Permission not found.'
+    }, 403)
   return True
 
 def requires_auth(permission=''):
